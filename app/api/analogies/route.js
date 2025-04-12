@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { generateAnalogy } from '@/utils/openai'
+import { generateAnalogy } from '../../../utils/openai'
 import { auth } from '@clerk/nextjs'
 
 export async function POST(req) {
