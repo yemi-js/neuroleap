@@ -1,0 +1,8 @@
+[33md9bd728[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m fix: resolve modifiers error in Stripe webhook route
+[33m0da5cb9[m refactor: update OpenAI API key env variable and use direct HTTP requests
+[33m93e8ed9[m refactor: remove alias imports and use relative paths
+[33mc5a8bd0[m refactor: remove Clerk and update dependencies
+[33mfa694f2[m remove: delete analogies route
+[33m7315d4c[m chore: update next.config.ts
+[33m98ed98f[m refactor: replace @ alias imports with relative paths
+[33ma72a7f6[m Initial commit

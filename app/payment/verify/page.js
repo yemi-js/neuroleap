@@ -1,81 +1,110 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { verifyPayment } from '../../../utils/paystack'
 import { supabase } from '../../../utils/supabase'
 
-export default function PaymentVerify() {
+// Create a client component for the verification logic
+function VerificationContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [status, setStatus] = useState('verifying')
-  const [message, setMessage] = useState('Verifying your payment...')
+  const [verificationStatus, setVerificationStatus] = useState('verifying')
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    const reference = searchParams.get('reference')
-    if (!reference) {
-      setStatus('error')
-      setMessage('No payment reference found')
-      return
-    }
-
-    const verify = async () => {
+    async function verifyTransaction() {
       try {
-        const result = await verifyPayment(reference)
-        
-        if (result.success) {
-          setStatus('success')
-          setMessage('Payment successful! Redirecting to dashboard...')
-          
-          // Update user's subscription status
-          await supabase
-            .from('users')
-            .update({
-              subscription_status: 'premium',
-              subscription_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-            })
-            .eq('id', result.data.metadata.userId)
-
-          // Redirect to dashboard after 3 seconds
-          setTimeout(() => {
-            router.push('/dashboard')
-          }, 3000)
-        } else {
-          setStatus('error')
-          setMessage('Payment verification failed. Please contact support.')
+        const reference = searchParams.get('reference')
+        if (!reference) {
+          setError('No reference found')
+          return
         }
-      } catch (error) {
-        console.error('Error verifying payment:', error)
-        setStatus('error')
-        setMessage('An error occurred while verifying your payment.')
+
+        // Verify the payment
+        const result = await verifyPayment(reference)
+        if (result.status === 'success') {
+          // Update user subscription in database
+          const { error: dbError } = await supabase
+            .from('user_subscriptions')
+            .update({ status: 'active', last_payment_reference: reference })
+            .eq('user_id', result.user_id)
+
+          if (dbError) throw dbError
+
+          setVerificationStatus('success')
+          // Redirect to dashboard after 2 seconds
+          setTimeout(() => router.push('/dashboard'), 2000)
+        } else {
+          setVerificationStatus('failed')
+          setError(result.message || 'Payment verification failed')
+        }
+      } catch (err) {
+        setVerificationStatus('failed')
+        setError(err.message || 'An error occurred during verification')
       }
     }
 
-    verify()
+    verifyTransaction()
   }, [searchParams, router])
 
+  if (error) {
+    return (
+      <div className="text-red-500">
+        <p>Error: {error}</p>
+        <button
+          onClick={() => router.push('/billing')}
+          className="mt-4 btn-primary"
+        >
+          Return to Billing
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <div className="text-center">
-          {status === 'verifying' && (
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          )}
-          {status === 'success' && (
-            <div className="text-green-500 text-4xl mb-4">✓</div>
-          )}
-          {status === 'error' && (
-            <div className="text-red-500 text-4xl mb-4">✕</div>
-          )}
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            {status === 'verifying' && 'Verifying Payment'}
-            {status === 'success' && 'Payment Successful'}
-            {status === 'error' && 'Payment Failed'}
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            {message}
-          </p>
+    <div className="text-center">
+      {verificationStatus === 'verifying' && (
+        <div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto"></div>
+          <p className="mt-4">Verifying your payment...</p>
         </div>
+      )}
+      {verificationStatus === 'success' && (
+        <div className="text-green-500">
+          <p>Payment verified successfully!</p>
+          <p className="mt-2">Redirecting to dashboard...</p>
+        </div>
+      )}
+      {verificationStatus === 'failed' && (
+        <div className="text-red-500">
+          <p>Payment verification failed.</p>
+          <button
+            onClick={() => router.push('/billing')}
+            className="mt-4 btn-primary"
+          >
+            Return to Billing
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Main page component with Suspense boundary
+export default function PaymentVerify() {
+  return (
+    <div className="min-h-screen bg-theme-light-bg dark:bg-theme-dark-bg flex items-center justify-center p-4">
+      <div className="card max-w-md w-full p-8">
+        <h1 className="text-2xl font-semibold text-center mb-6">Payment Verification</h1>
+        <Suspense fallback={
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500 mx-auto"></div>
+            <p className="mt-4">Loading...</p>
+          </div>
+        }>
+          <VerificationContent />
+        </Suspense>
       </div>
     </div>
   )
