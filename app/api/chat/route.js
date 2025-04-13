@@ -2,12 +2,10 @@
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { OpenAI } from 'openai'
 import { NextResponse } from 'next/server'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
+const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY
+const OPENAI_API_URL = 'https://api.openai.com/v1'
 
 const TONE_DESCRIPTIONS = {
   expert: 'You are a university professor, providing precise and technical explanations with academic rigor.',
@@ -123,16 +121,28 @@ export async function POST(req) {
     console.log('Sending to OpenAI:', JSON.stringify(formattedMessages, null, 2))
 
     // Get OpenAI response
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: formattedMessages,
-      temperature: 0.7,
-      max_tokens: 1000
+    const response = await fetch(`${OPENAI_API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: formattedMessages,
+        temperature: 0.7,
+        max_tokens: 1000
+      })
     })
 
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`)
+    }
+
+    const completion = await response.json()
     console.log('OpenAI Response:', JSON.stringify(completion, null, 2))
 
-    if (!completion.choices || completion.choices.length === 0) {
+    if (!completion.choices?.[0]?.message) {
       throw new Error('No response from OpenAI')
     }
 
