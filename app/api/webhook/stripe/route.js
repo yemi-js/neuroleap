@@ -1,20 +1,22 @@
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+const stripeSecret = process.env.STRIPE_SECRET_KEY
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+const stripe = stripeSecret ? new Stripe(stripeSecret, { apiVersion: '2023-10-16' }) : null
 
 export async function POST(req) {
+  if (!stripeSecret || !webhookSecret) {
+    console.warn('Stripe not configured – webhook disabled.')
+    return new Response('Stripe not configured', { status: 200 })
+  }
+
   const body = await req.text()
   const signature = headers().get('stripe-signature')
 
   let event
-
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET
-    )
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
   } catch (err) {
     return new Response(`Webhook Error: ${err.message}`, { status: 400 })
   }
@@ -23,10 +25,7 @@ export async function POST(req) {
 
   switch (event.type) {
     case 'checkout.session.completed':
-      // Handle successful payment
       try {
-        // Update user's subscription status in your database
-        // You would implement your database update logic here
         console.log('Payment successful for session:', session.id)
       } catch (err) {
         console.error('Error updating user subscription:', err)
@@ -36,9 +35,7 @@ export async function POST(req) {
 
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted':
-      // Handle subscription updates
       try {
-        // Update subscription status in your database
         console.log('Subscription updated for customer:', session.customer)
       } catch (err) {
         console.error('Error updating subscription:', err)
@@ -52,4 +49,4 @@ export async function POST(req) {
 
 export async function GET() {
   return new Response('Method not allowed', { status: 405 })
-} 
+}
