@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import crypto from 'crypto'
-import { supabase } from '../../../../utils/supabase'
+import { supabase } from '@/utils/supabase'
 
 export async function POST(req) {
   const body = await req.text()

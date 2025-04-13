@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { getUserConversations, createConversation, generateResponse } from '../utils/openai'
-import { uploadFile, getConversationFiles } from '../utils/fileUpload'
-import { updateUserAnalytics, updateConversationAnalytics, getConversationAnalytics } from '../utils/analytics'
+import { getUserConversations, createConversation, generateResponse } from '@/utils/openai'
+import { uploadFile, getConversationFiles } from '@/utils/fileUpload'
+import { updateUserAnalytics, updateConversationAnalytics, getConversationAnalytics } from '@/utils/analytics'
 
 export default function ChatInterface() {
   const { user } = useUser()
