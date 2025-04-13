@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { verifyPayment } from '@/utils/paystack'
-import { supabase } from '@/utils/supabase'
+import { verifyPayment } from '../../../utils/paystack'
+import { supabase } from '../../../utils/supabase'
 
 export default function PaymentVerify() {
   const router = useRouter()
